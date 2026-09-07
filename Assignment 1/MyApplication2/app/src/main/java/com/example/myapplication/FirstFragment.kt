@@ -16,6 +16,7 @@ class FirstFragment : Fragment(R.layout.fragment_first) {
         val button4 = view.findViewById<Button>(R.id.button4)
         val button5 = view.findViewById<Button>(R.id.button5)
 
+        //Listen for interactions with specific buttons
         button1.setOnClickListener {
             openSecondFragment(button1.text.toString())
         }
@@ -37,6 +38,8 @@ class FirstFragment : Fragment(R.layout.fragment_first) {
         }
     }
 
+    //Opens second fragment with button text
+    //Using a method reduces code by having a stand-in variable for the button text when calling 'putString'
     private fun openSecondFragment(buttonText: String) {
 
         val secondFragment = SecondFragment()
@@ -46,6 +49,7 @@ class FirstFragment : Fragment(R.layout.fragment_first) {
 
         secondFragment.arguments = bundle
 
+        //Switches to second fragment
         parentFragmentManager.beginTransaction()
             .replace(R.id.fragment_container, secondFragment)
             .addToBackStack(null)
