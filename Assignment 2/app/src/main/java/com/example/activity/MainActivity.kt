@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -39,14 +40,22 @@ import kotlinx.coroutines.flow.StateFlow
 class CourseViewModel : ViewModel()
 {
     //Model
-    private val tasks = MutableStateFlow(listOf<String>())
-    val tasksReadOnly : StateFlow<List<String>> = tasks
+    private val courseList = MutableStateFlow(listOf<Course>())
+    val courseListReadOnly : StateFlow<List<Course>> = courseList
 
     // Methods to modify the Model
-    fun addTask (task: String){
-        tasks.value += task
+    fun addCourse (course: Course){
+        courseList.value += course
+    }
+
+    fun removeCourse (course: Course){
+        courseList.value -= course
     }
 }
+
+data class Course(var department: String, var courseNumber: Int, var location: String)
+
+
 
 class MainActivity : ComponentActivity() {
 
@@ -57,7 +66,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             MVVMDemoV2Theme {
                 val myVMObj: CourseViewModel = viewModel()
-                TodoList (myVMObj)
+                CourseList (myVMObj)
             }
         }
     }
@@ -65,29 +74,60 @@ class MainActivity : ComponentActivity() {
 
 //View
 @Composable
-fun TodoList(myVM: CourseViewModel) {
+fun CourseList(myVM: CourseViewModel) {
 
     Column(Modifier.fillMaxWidth().statusBarsPadding(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center) {
 
-         //Observe my tasks
-        val observableTasks by myVM.tasksReadOnly.collectAsStateWithLifecycle()
+         //Observe my Courses
+        val observableCourses by myVM.courseListReadOnly.collectAsStateWithLifecycle()
 
-        var itemText by remember { mutableStateOf("") }
+        var departmentText by remember { mutableStateOf("") }
+        var numText by remember { mutableStateOf("") }
+        var locationText by remember { mutableStateOf("") }
 
-        Row {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             OutlinedTextField(
-                value = itemText,
-                onValueChange = { itemText = it},
-                label = { Text("Item") }
+                value = departmentText,
+                onValueChange = { departmentText = it },
+                label = { Text("Department") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = numText,
+                onValueChange = { numText = it },
+                label = { Text("Course Number") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedTextField(
+                value = locationText,
+                onValueChange = { locationText = it },
+                label = { Text("Location") },
+                modifier = Modifier.fillMaxWidth()
             )
         }
+        Spacer(Modifier.height(8.dp))
         Row {
             Button(onClick = {
-                myVM.addTask(itemText)
-                itemText=""
+                val courseNum = numText.toIntOrNull()
+                if (courseNum != null && departmentText.isNotBlank() && locationText.isNotBlank()) {
+                    val newCourse = Course(
+                        departmentText,
+                        courseNum,
+                        locationText
+                    )
 
+                    myVM.addCourse(newCourse)
+                    departmentText = ""
+                    numText = ""
+                    locationText = ""
+                }
             }) {
                 Text("Add Item")
             }
@@ -95,11 +135,11 @@ fun TodoList(myVM: CourseViewModel) {
         }
 
         Spacer(Modifier.height(20.dp))
-        Text("ToDo List", fontSize = 25.sp, fontWeight = FontWeight.ExtraBold, color = Color.Blue)
+        Text("Course List", fontSize = 25.sp, fontWeight = FontWeight.ExtraBold, color = Color.Blue)
         Row{
             //display my list
            LazyColumn {
-               items(observableTasks){ Text(it,
+               items(observableCourses){ Text(it.department + " " + it.courseNumber + " " + it.location,
                    fontSize = 20.sp,
                    fontFamily = FontFamily.SansSerif,
                    fontWeight = FontWeight.Bold)}
