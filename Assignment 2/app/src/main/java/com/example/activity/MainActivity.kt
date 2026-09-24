@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,9 +15,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -80,12 +85,13 @@ fun CourseList(myVM: CourseViewModel) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center) {
 
-         //Observe my Courses
+        // Observe my Courses
         val observableCourses by myVM.courseListReadOnly.collectAsStateWithLifecycle()
 
         var departmentText by remember { mutableStateOf("") }
         var numText by remember { mutableStateOf("") }
         var locationText by remember { mutableStateOf("") }
+        var selectedCourse by remember { mutableStateOf<Course?>(null) }
 
         Column(
             modifier = Modifier
@@ -136,15 +142,55 @@ fun CourseList(myVM: CourseViewModel) {
 
         Spacer(Modifier.height(20.dp))
         Text("Course List", fontSize = 25.sp, fontWeight = FontWeight.ExtraBold, color = Color.Blue)
-        Row{
-            //display my list
-           LazyColumn {
-               items(observableCourses){ Text(it.department + " " + it.courseNumber + " " + it.location,
-                   fontSize = 20.sp,
-                   fontFamily = FontFamily.SansSerif,
-                   fontWeight = FontWeight.Bold)}
-               }
+        Spacer(Modifier.height(8.dp))
+        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+            // display my list showing only course name (e.g., CS 4530)
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(observableCourses) { course ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { selectedCourse = course },
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Text(
+                            text = "${course.department} ${course.courseNumber}",
+                            fontSize = 20.sp,
+                            fontFamily = FontFamily.SansSerif,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                }
+            }
+        }
 
+        // Display full details in a dialog when a course is clicked
+        selectedCourse?.let { course ->
+            AlertDialog(
+                onDismissRequest = { selectedCourse = null },
+                title = {
+                    Text(
+                        text = "${course.department} ${course.courseNumber}",
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(text = "Department: ${course.department}")
+                        Text(text = "Course Number: ${course.courseNumber}")
+                        Text(text = "Location: ${course.location}")
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { selectedCourse = null }) {
+                        Text("Close")
+                    }
+                }
+            )
         }
     }
 }
