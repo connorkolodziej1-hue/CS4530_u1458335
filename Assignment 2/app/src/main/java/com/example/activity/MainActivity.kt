@@ -163,6 +163,11 @@ fun CourseList(myVM: CourseViewModel) {
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.padding(16.dp)
                         )
+                        Button(onClick = {
+                            myVM.removeCourse(course)
+                        }) {
+                            Text("Remove")
+                        }
                     }
                 }
             }
