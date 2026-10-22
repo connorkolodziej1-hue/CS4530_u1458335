@@ -1,5 +1,6 @@
 package com.example.activity
 
+import android.app.Application
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -34,32 +35,43 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.activity.room.CourseEntity
 import com.example.activity.ui.theme.MVVMDemoV2Theme
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import kotlin.collections.emptyList
 
 //viewModel and the Model (The model is just a list of items, that's why I didn't create a separate class/file for it
-class CourseViewModel : ViewModel()
+class CourseViewModel(application: Application): AndroidViewModel(application)
 {
+    private val dao = (application as CourseApp).repository
+
     //Model
-    private val courseList = MutableStateFlow(listOf<Course>())
-    val courseListReadOnly : StateFlow<List<Course>> = courseList
+    val courseListReadOnly : Flow<List<CourseEntity?>> = dao.allCourses.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
 
     // Methods to modify the Model
-    fun addCourse (course: Course){
-        courseList.value += course
+    fun addItem (item: CourseEntity?){
+        if (item != null) {
+            viewModelScope.launch {
+                dao.addCourse(item)
+            }
+        }
     }
 
-    fun removeCourse (course: Course){
-        courseList.value -= course
+    fun removeItem (item: CourseEntity?){
+        if (item != null) {
+            viewModelScope.launch {
+                dao.removeCourse(item)
+            }
+        }
     }
 }
-
-data class Course(var department: String, var courseNumber: Int, var location: String)
-
 
 
 class MainActivity : ComponentActivity() {
@@ -86,12 +98,12 @@ fun CourseList(myVM: CourseViewModel) {
         verticalArrangement = Arrangement.Center) {
 
         // Observe my Courses
-        val observableCourses by myVM.courseListReadOnly.collectAsStateWithLifecycle()
+        val observableCourses by myVM.courseListReadOnly.collectAsStateWithLifecycle(null)
 
         var departmentText by remember { mutableStateOf("") }
         var numText by remember { mutableStateOf("") }
         var locationText by remember { mutableStateOf("") }
-        var selectedCourse by remember { mutableStateOf<Course?>(null) }
+        var selectedCourse by remember { mutableStateOf<CourseEntity?>(null) }
 
         Column(
             modifier = Modifier
@@ -123,13 +135,13 @@ fun CourseList(myVM: CourseViewModel) {
             Button(onClick = {
                 val courseNum = numText.toIntOrNull()
                 if (courseNum != null && departmentText.isNotBlank() && locationText.isNotBlank()) {
-                    val newCourse = Course(
+                    val newCourse = CourseEntity(
                         departmentText,
                         courseNum,
                         locationText
                     )
 
-                    myVM.addCourse(newCourse)
+                    myVM.addItem(newCourse)
                     departmentText = ""
                     numText = ""
                     locationText = ""
@@ -149,7 +161,8 @@ fun CourseList(myVM: CourseViewModel) {
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(observableCourses) { course ->
+                val courses = observableCourses ?: emptyList()
+                items(items = courses.filterNotNull()) { course ->
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -164,7 +177,7 @@ fun CourseList(myVM: CourseViewModel) {
                             modifier = Modifier.padding(16.dp)
                         )
                         Button(onClick = {
-                            myVM.removeCourse(course)
+                            myVM.removeItem(course)
                         }) {
                             Text("Remove")
                         }
